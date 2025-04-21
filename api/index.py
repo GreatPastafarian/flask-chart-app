@@ -1,43 +1,40 @@
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify
 import matplotlib.pyplot as plt
-import numpy as np
-from io import BytesIO
+import io
+import base64
 
 app = Flask(__name__)
 
 @app.route('/generate-chart', methods=['POST'])
 def generate_chart():
-    try:
-        data = request.json['data']
+    data = request.json['data']
 
+    for calculation_name, values in data.items():
+        N = values['N']
+        keff = values['keff']
+
+        # Вычисление среднего keff
+        avg_keff = [sum(keff[:i+1]) / (i+1) for i in range(len(keff))]
+
+        # Построение графика
         plt.figure(figsize=(12, 6))
-
-        for program in data:
-            n = program['n']
-            keff = program['keff']
-
-            # Рассчет скользящего среднего
-            window_size = 5
-            cumsum = np.cumsum(np.insert(keff, 0, 0))
-            avg_keff = (cumsum[window_size:] - cumsum[:-window_size]) / window_size
-
-            plt.plot(n, keff, 'o-', label=f'{program["name"]} (данные)')
-            plt.plot(n[window_size-1:], avg_keff, '--', label=f'{program["name"]} (среднее)')
-
+        plt.plot(N, keff, 'o-', label='keff')
+        plt.plot(N, avg_keff, '--', label='Среднее keff')
         plt.xlabel('N')
-        plt.ylabel('Keff')
-        plt.title('Зависимость Keff от N')
+        plt.ylabel('keff')
+        plt.title(f'Зависимость keff от N для {calculation_name}')
         plt.legend()
         plt.grid(True)
 
-        # Сохранение в буфер
-        img_buffer = BytesIO()
-        plt.savefig(img_buffer, format='png')
+        # Сохранение графика в буфер
+        buf = io.BytesIO()
+        plt.savefig(buf, format='png')
+        buf.seek(0)
+        img_base64 = base64.b64encode(buf.getvalue()).decode('utf-8')
         plt.close()
-        img_buffer.seek(0)
 
-        return send_file(img_buffer, mimetype='image/png')
+        # Возвращение изображения в ответе
+        return jsonify({'image': img_base64})
 
-    except Exception as e:
-        app.logger.error(f"Ошибка: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+if __name__ == '__main__':
+    app.run(debug=True)
