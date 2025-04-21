@@ -1,10 +1,11 @@
 from flask import Flask, request, jsonify, send_file
 import matplotlib.pyplot as plt
 import numpy as np
+import seaborn as sns  # Импортируем seaborn
 from io import BytesIO
 
 app = Flask(__name__)
-plt.style.use('seaborn')  # Стиль оформления как в оригинале
+sns.set(style="whitegrid")  # Устанавливаем стиль seaborn
 
 def calculate_cumulative_average(values):
     """Рассчет кумулятивного среднего по поколениям"""
