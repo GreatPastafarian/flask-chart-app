@@ -25,13 +25,9 @@ def generate_chart():
         if not data:
             return jsonify({"error": "Нет данных для построения"}), 400
 
-        # Уменьшаем размер фигуры и разрешение
-        plt.figure(figsize=(8, 5))
+        images = []
 
-        # Цветовая палитра для разных программ
-        colors = plt.cm.tab10(np.linspace(0, 1, len(data)))
-
-        for idx, program in enumerate(data):
+        for program in data:
             n = program.get('n', [])
             keff = program.get('keff', [])
             name = program.get('name', 'Unknown')
@@ -42,38 +38,40 @@ def generate_chart():
             # Рассчет средних значений
             avg_keff = calculate_cumulative_average(keff)
 
+            # Уменьшаем размер фигуры и разрешение
+            plt.figure(figsize=(6, 4))
+
             # Построение графиков
-            color = colors[idx]
             plt.plot(n, keff, 'o-',
-                    color=color,
-                    markersize=4,
-                    linewidth=1.2,
-                    label=f'{name} - данные')
+                     markersize=3,
+                     linewidth=1.0,
+                     label=f'{name} - данные')
 
             plt.plot(n, avg_keff, '--',
-                    color=color,
-                    linewidth=1.5,
-                    alpha=0.7,
-                    label=f'{name} - среднее')
+                     linewidth=1.2,
+                     alpha=0.7,
+                     label=f'{name} - среднее')
 
-        # Оформление графика
-        plt.xlabel('Номер поколения (N)', fontsize=10)
-        plt.ylabel('Keff', fontsize=10)
-        plt.title('Зависимость Keff от номера поколения', fontsize=12)
-        plt.grid(True, linestyle='--', alpha=0.7)
-        plt.legend(fontsize=8, loc='upper right')
-        plt.tight_layout()
+            # Оформление графика
+            plt.xlabel('Номер поколения (N)', fontsize=9)
+            plt.ylabel('Keff', fontsize=9)
+            plt.title(f'Зависимость Keff от номера поколения для {name}', fontsize=11)
+            plt.grid(True, linestyle='--', alpha=0.7)
+            plt.legend(fontsize=7, loc='upper right')
+            plt.tight_layout()
 
-        # Сохранение в буфер с уменьшенным разрешением
-        img_buffer = BytesIO()
-        plt.savefig(img_buffer,
-                  format='png',
-                  dpi=100,  # Уменьшаем разрешение
-                  bbox_inches='tight')
-        plt.close()
-        img_buffer.seek(0)
+            # Сохранение в буфер с уменьшенным разрешением
+            img_buffer = BytesIO()
+            plt.savefig(img_buffer,
+                         format='png',
+                         dpi=75,  # Уменьшаем разрешение
+                         bbox_inches='tight')
+            plt.close()
+            img_buffer.seek(0)
 
-        return send_file(img_buffer, mimetype='image/png')
+            images.append(img_buffer)
+
+        return jsonify({"images": [img_buffer.getvalue().hex() for img_buffer in images]})
 
     except Exception as e:
         app.logger.error(f"[ERROR] {str(e)}")
