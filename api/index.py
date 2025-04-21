@@ -1,4 +1,4 @@
-from flask import Flask, request, send_file
+from flask import Flask, request, send_file, jsonify
 import matplotlib.pyplot as plt
 import pandas as pd
 import io
@@ -13,23 +13,31 @@ def generate_chart():
         print("Received data:", data)
 
         # Проверка данных
-        if not data or not isinstance(data, list) or not isinstance(data[0], list):
+        if not data or not isinstance(data, list) or not isinstance(data[0], dict):
             raise ValueError("Invalid data format")
 
-        # Создание DataFrame
-        df = pd.DataFrame(data[1:], columns=data[0])
-        print("DataFrame created successfully:", df)
+        # Преобразование данных в DataFrame
+        df_list = []
+        for dataset in data:
+            df_temp = pd.DataFrame(dataset)
+            df_temp['Dataset'] = dataset['Dataset']  # Добавление столбца для идентификации датасета
+            df_list.append(df_temp)
 
-        # Проверка наличия столбцов 'A' и 'B'
-        if 'A' not in df.columns or 'B' not in df.columns:
-            raise KeyError("Missing required columns 'A' or 'B'")
+        df = pd.concat(df_list, ignore_index=True)
+        df = df.apply(pd.to_numeric, errors='coerce')  # Преобразование в числовой формат
+        print("DataFrame after conversion:", df)
+
+        # Проверка наличия столбцов 'N', 'Keff' и 'avgKeff'
+        if 'N' not in df.columns or 'Keff' not in df.columns or 'avgKeff' not in df.columns:
+            raise KeyError("Missing required columns 'N', 'Keff' or 'avgKeff'")
 
         # Построение графика
         plt.figure(figsize=(10, 6))
-        plt.plot(df['A'], df['B'], label='Data Line')
-        plt.xlabel('A')
-        plt.ylabel('B')
-        plt.title('A vs B')
+        plt.plot(df['N'], df['Keff'], label='Keff', marker='o')
+        plt.plot(df['N'], df['avgKeff'], label='Average Keff', linestyle='--', marker='x')
+        plt.xlabel('N')
+        plt.ylabel('Keff')
+        plt.title('Keff vs N')
         plt.legend()
         plt.grid(True)
 
@@ -43,7 +51,6 @@ def generate_chart():
         # Логирование ошибки
         print("Error:", str(e))
         return jsonify({'error': str(e)}), 500
-
 
 if __name__ == '__main__':
     app.run(debug=True)
