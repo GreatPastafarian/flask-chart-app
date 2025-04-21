@@ -13,14 +13,13 @@ def generate_chart():
         print("Received data:", data)
 
         # Проверка данных
-        if not data or not isinstance(data, list) or not isinstance(data[0], dict):
+        if not data or not isinstance(data, list):
             raise ValueError("Invalid data format")
 
         # Преобразование данных в DataFrame
         df_list = []
         for dataset in data:
             df_temp = pd.DataFrame(dataset)
-            df_temp['Dataset'] = dataset['Dataset']  # Добавление столбца для идентификации датасета
             df_list.append(df_temp)
 
         df = pd.concat(df_list, ignore_index=True)
