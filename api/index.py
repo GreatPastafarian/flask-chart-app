@@ -1,81 +1,111 @@
-from flask import Flask, request, jsonify, send_file
-import matplotlib.pyplot as plt
-import numpy as np
-import seaborn as sns  # Импортируем seaborn
-from io import BytesIO
+function updateChart() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var data = sheet.getDataRange().getValues();
+  var programsData = [];
 
-app = Flask(__name__)
-sns.set(style="whitegrid")  # Устанавливаем стиль seaborn
+  // Настройки строк (проверьте индексы!)
+  var PROGRAM_NAME_ROW = 9;    // Строка 10 (индекс 9)
+  var DATA_START_ROW = 12;     // Строка 13 (индекс 12)
 
-def calculate_cumulative_average(values):
-    """Рассчет кумулятивного среднего по поколениям"""
-    averages = []
-    total = 0.0
-    for i, val in enumerate(values):
-        total += val
-        averages.append(total / (i + 1))
-    return averages
+  for (var col = 0; col < data[0].length; col += 2) {
+    var programName = data[PROGRAM_NAME_ROW][col];
+    if (!programName) continue;
 
-@app.route('/generate-chart', methods=['POST'])
-def generate_chart():
-    try:
-        data = request.json.get('data', [])
+    var nValues = [];
+    var keffValues = [];
+    var row = DATA_START_ROW;
 
-        if not data:
-            return jsonify({"error": "Нет данных для построения"}), 400
+    while (row < data.length) {
+      var nCell = data[row][col];
+      var keffCell = data[row][col + 1];
 
-        plt.figure(figsize=(15, 8))
+      if (nCell === "" && keffCell === "") break;
 
-        # Цветовая палитра для разных программ
-        colors = plt.cm.tab10(np.linspace(0, 1, len(data)))
+      var n = parseNumber(nCell);
+      var keff = parseNumber(keffCell);
 
-        for idx, program in enumerate(data):
-            n = program.get('n', [])
-            keff = program.get('keff', [])
-            name = program.get('name', 'Unknown')
+      if (isNaN(n) || isNaN(keff)) {
+        Logger.log(`Некорректные данные в строке ${row + 1}: N=${nCell}, Keff=${keffCell}`);
+        break;
+      }
 
-            if not n or not keff:
-                continue
+      nValues.push(n);
+      keffValues.push(keff);
+      row++;
+    }
 
-            # Рассчет средних значений
-            avg_keff = calculate_cumulative_average(keff)
+    if (nValues.length !== keffValues.length) {
+      Logger.log(`Ошибка для ${programName}: разные длины N(${nValues.length}) и Keff(${keffValues.length})`);
+      continue;
+    }
 
-            # Построение графиков
-            color = colors[idx]
-            plt.plot(n, keff, 'o-',
-                    color=color,
-                    markersize=5,
-                    linewidth=1.5,
-                    label=f'{name} - данные')
+    if (nValues.length > 0) {
+      programsData.push({
+        name: programName.trim(),
+        n: nValues,
+        keff: keffValues
+      });
+      Logger.log(`${programName}: собрано ${nValues.length} точек`);
+    }
+  }
 
-            plt.plot(n, avg_keff, '--',
-                    color=color,
-                    linewidth=2,
-                    alpha=0.7,
-                    label=f'{name} - среднее')
+  if (programsData.length === 0) {
+    Logger.log("Нет данных для построения");
+    return;
+  }
 
-        # Оформление графика
-        plt.xlabel('Номер поколения (N)', fontsize=12)
-        plt.ylabel('Keff', fontsize=12)
-        plt.title('Зависимость Keff от номера поколения', fontsize=14)
-        plt.grid(True, linestyle='--', alpha=0.7)
-        plt.legend(fontsize=10, loc='upper right')
-        plt.tight_layout()
+  // Отправка данных
+  var payload = { data: programsData };
+  var url = 'https://flask-chart-app.onrender.com/generate-chart';
 
-        # Сохранение в буфер
-        img_buffer = BytesIO()
-        plt.savefig(img_buffer,
-                  format='png',
-                  dpi=300,
-                  bbox_inches='tight')
-        plt.close()
-        img_buffer.seek(0)
+  var options = {
+    method: 'post',
+    contentType: 'application/json',
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  };
 
-        return send_file(img_buffer, mimetype='image/png')
+  try {
+    var response = UrlFetchApp.fetch(url, options);
 
-    except Exception as e:
-        app.logger.error(f"[ERROR] {str(e)}")
-        return jsonify({"error": str(e)}), 500
+    if (response.getResponseCode() === 200) {
+      var blob = response.getBlob();
 
-if __name__ == '__main__':
-    app.run(debug=False, port=5000)
+      // Найти пустую ячейку для вставки графика
+      var lastRow = sheet.getLastRow();
+      var lastColumn = sheet.getLastColumn();
+      var insertRow = lastRow + 1;
+      var insertColumn = lastColumn + 1;
+
+      // Удаление старых изображений в ячейке, если они есть
+      var images = sheet.getImages();
+      for (var i = 0; i < images.length; i++) {
+        var image = images[i];
+        if (image.getAnchorCell().getRow() === insertRow && image.getAnchorCell().getColumn() === insertColumn) {
+          sheet.removeImage(image);
+        }
+      }
+
+      // Логирование номера ячейки
+      Logger.log(`Inserting image into cell: ${String.fromCharCode(64 + insertColumn)}, ${insertRow}`);
+
+      // Вставка изображения в следующую пустую ячейку
+      sheet.insertImage(blob, insertColumn, insertRow);
+      Logger.log("График успешно обновлен");
+    } else {
+      Logger.log("Ошибка сервера: " + response.getContentText());
+    }
+  } catch (e) {
+    Logger.log("Критическая ошибка: " + e.toString());
+  }
+}
+
+function parseNumber(value) {
+  if (typeof value === 'string') {
+    const cleaned = value
+      .replace(/,/g, '.')
+      .replace(/[^0-9.eE-]/g, '');
+    return parseFloat(cleaned) || NaN;
+  }
+  return Number(value);
+}
