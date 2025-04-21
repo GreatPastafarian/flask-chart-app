@@ -25,7 +25,8 @@ def generate_chart():
         if not data:
             return jsonify({"error": "Нет данных для построения"}), 400
 
-        plt.figure(figsize=(15, 8))
+        # Уменьшаем размер фигуры и разрешение
+        plt.figure(figsize=(10, 6))
 
         # Цветовая палитра для разных программ
         colors = plt.cm.tab10(np.linspace(0, 1, len(data)))
@@ -63,11 +64,11 @@ def generate_chart():
         plt.legend(fontsize=10, loc='upper right')
         plt.tight_layout()
 
-        # Сохранение в буфер
+        # Сохранение в буфер с уменьшенным разрешением
         img_buffer = BytesIO()
         plt.savefig(img_buffer,
                   format='png',
-                  dpi=300,
+                  dpi=150,  # Уменьшаем разрешение
                   bbox_inches='tight')
         plt.close()
         img_buffer.seek(0)
