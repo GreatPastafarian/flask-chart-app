@@ -1,55 +1,43 @@
-from flask import Flask, request, send_file, jsonify
+from flask import Flask, request, jsonify, send_file
 import matplotlib.pyplot as plt
-import pandas as pd
-import io
+import numpy as np
+from io import BytesIO
 
 app = Flask(__name__)
 
 @app.route('/generate-chart', methods=['POST'])
 def generate_chart():
     try:
-        # Логирование входных данных
         data = request.json['data']
-        print("Received data:", data)
 
-        # Проверка данных
-        if not data or not isinstance(data, list):
-            raise ValueError("Invalid data format")
+        plt.figure(figsize=(12, 6))
 
-        # Преобразование данных в DataFrame
-        df_list = []
-        for dataset in data:
-            df_temp = pd.DataFrame(dataset)
-            df_list.append(df_temp)
+        for program in data:
+            n = program['n']
+            keff = program['keff']
 
-        df = pd.concat(df_list, ignore_index=True)
-        df = df.apply(pd.to_numeric, errors='coerce')  # Преобразование в числовой формат
-        print("DataFrame after conversion:", df)
+            # Рассчет скользящего среднего
+            window_size = 5
+            cumsum = np.cumsum(np.insert(keff, 0, 0))
+            avg_keff = (cumsum[window_size:] - cumsum[:-window_size]) / window_size
 
-        # Проверка наличия столбцов 'N', 'Keff' и 'avgKeff'
-        if 'N' not in df.columns or 'Keff' not in df.columns or 'avgKeff' not in df.columns:
-            raise KeyError("Missing required columns 'N', 'Keff' or 'avgKeff'")
+            plt.plot(n, keff, 'o-', label=f'{program["name"]} (данные)')
+            plt.plot(n[window_size-1:], avg_keff, '--', label=f'{program["name"]} (среднее)')
 
-        # Построение графика
-        plt.figure(figsize=(10, 6))
-        plt.plot(df['N'], df['Keff'], label='Keff', marker='o')
-        plt.plot(df['N'], df['avgKeff'], label='Average Keff', linestyle='--', marker='x')
         plt.xlabel('N')
         plt.ylabel('Keff')
-        plt.title('Keff vs N')
+        plt.title('Зависимость Keff от N')
         plt.legend()
         plt.grid(True)
 
-        # Сохранение графика в буфер
-        img_buf = io.BytesIO()
-        plt.savefig(img_buf, format='png')
-        img_buf.seek(0)
+        # Сохранение в буфер
+        img_buffer = BytesIO()
+        plt.savefig(img_buffer, format='png')
+        plt.close()
+        img_buffer.seek(0)
 
-        return send_file(img_buf, mimetype='image/png')
+        return send_file(img_buffer, mimetype='image/png')
+
     except Exception as e:
-        # Логирование ошибки
-        print("Error:", str(e))
+        app.logger.error(f"Ошибка: {str(e)}")
         return jsonify({'error': str(e)}), 500
-
-if __name__ == '__main__':
-    app.run(debug=True)
