@@ -1,3 +1,22 @@
+from flask import Flask, request, jsonify, send_file
+import matplotlib.pyplot as plt
+import numpy as np
+from io import BytesIO
+
+app = Flask(__name__)
+
+# Устанавливаем стандартный стиль Matplotlib
+plt.style.use('default')
+
+def calculate_cumulative_average(values):
+    """Рассчет кумулятивного среднего по поколениям"""
+    averages = []
+    total = 0.0
+    for i, val in enumerate(values):
+        total += val
+        averages.append(total / (i + 1))
+    return averages
+
 @app.route('/generate-chart', methods=['POST'])
 def generate_chart():
     try:
@@ -42,3 +61,6 @@ def generate_chart():
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+if __name__ == '__main__':
+    app.run(debug=False, port=5000)
