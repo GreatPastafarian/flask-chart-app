@@ -32,7 +32,7 @@ def generate_chart():
 
             # Настройки графика
             plt.title(item['name'])
-            plt.xlabel('Номер поколения (N)')
+            plt.xlabel('Число частиц (N)')
             plt.ylabel('Keff')
             plt.grid(True, linestyle='--', alpha=0.3)
             plt.legend()
