@@ -49,6 +49,9 @@ def generate_chart():
             # Создаем график
             plt.figure(figsize=(6, 3))
 
+            # Основные данные
+            plt.plot(n_resampled, values_resampled, 'o-', markersize=3, label='Данные', alpha=0.7)
+
             # Среднее значение
             avg_values = calculate_cumulative_average(values_resampled)
             plt.plot(n_resampled, avg_values, '--', linewidth=1.5, label='Среднее')
