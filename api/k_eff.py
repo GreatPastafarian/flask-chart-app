@@ -34,18 +34,17 @@ def generate_chart():
     try:
         # Получаем данные из запроса
         data = request.json.get('data', [])
-        num_points = request.json.get('num_points', "full")  # Количество точек для отображения
+        num_points = request.json.get('num_points', "full")  # Значение по умолчанию: "auto"
 
         images = []
         for item in data:
+            # Если num_points = "auto", используем все точки
             if num_points == "full":
-            # Основные данные
-              plt.plot(item['n'], item['values'], 'o-', markersize=3, label='Данные', alpha=0.7)
-            else :
-              # Разбиваем данные на заданное количество точек
-              n_resampled, values_resampled = resample_data(item['n'], item['values'], num_points)
-              # Основные данные
-              plt.plot(n_resampled, values_resampled, 'o-', markersize=3, label='Данные', alpha=0.7)
+                n_resampled = item['n']
+                values_resampled = item['values']
+            else:
+                # Разбиваем данные на заданное количество точек
+                n_resampled, values_resampled = resample_data(item['n'], item['values'], int(num_points))
 
             # Создаем график
             plt.figure(figsize=(6, 3))
