@@ -43,9 +43,9 @@ def generate_chart():
             else :
                 plt.xlabel(item['xAxisLabel'])  # Используем подпись для оси X
             if item['yAxisLabel'] == "H":
-              plt.ylabel("Энтропия Шеннона" + item['yAxisLabel'])  # Используем подпись для оси Y
+              plt.ylabel("Энтропия Шеннона " + item['yAxisLabel'])  # Используем подпись для оси Y
             elif item['yAxisLabel'] == "Keff":
-              plt.ylabel("Коэффициент размножения" + item['yAxisLabel'])  # Используем подпись для оси Y
+              plt.ylabel("Коэффициент размножения " + item['yAxisLabel'])  # Используем подпись для оси Y
             else :
               plt.ylabel(item['yAxisLabel'])  # Используем подпись для оси Y
             plt.grid(True, linestyle='--', alpha=0.3)
