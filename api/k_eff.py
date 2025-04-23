@@ -34,19 +34,21 @@ def generate_chart():
     try:
         # Получаем данные из запроса
         data = request.json.get('data', [])
-        num_points = request.json.get('num_points', 100)  # Количество точек для отображения
+        num_points = request.json.get('num_points', "full")  # Количество точек для отображения
 
         images = []
         for item in data:
-            # Разбиваем данные на заданное количество точек
-            n_resampled, values_resampled = resample_data(item['n'], item['values'], num_points)
-
+            if num_points == 'full':
+            # Основные данные
+              plt.plot(item['n'], item['values'], 'o-', markersize=3, label='Данные', alpha=0.7)
+            else :
+              # Разбиваем данные на заданное количество точек
+              n_resampled, values_resampled = resample_data(item['n'], item['values'], num_points)
+              # Основные данные
+              plt.plot(n_resampled, values_resampled, 'o-', markersize=3, label='Данные', alpha=0.7)
 
             # Создаем график
             plt.figure(figsize=(6, 3))
-
-            # Основные данные
-            plt.plot(n_resampled, values_resampled, 'o-', markersize=3, label='Данные', alpha=0.7)
 
             # Среднее значение
             avg_values = calculate_cumulative_average(values_resampled)
