@@ -15,26 +15,42 @@ def calculate_cumulative_average(values):
         averages.append(total / (i + 1))
     return averages
 
+def resample_data(n, values, num_points):
+    """Равномерно разбивает массив данных на заданное количество точек."""
+    if len(n) != len(values):
+        raise ValueError("Длины массивов n и values должны быть одинаковыми.")
+
+    # Создаем индексы для равномерного разбиения
+    indices = np.linspace(0, len(n) - 1, num_points, endpoint=True, dtype=int)
+
+    # Выбираем точки по индексам
+    n_resampled = [n[i] for i in indices]
+    values_resampled = [values[i] for i in indices]
+
+    return n_resampled, values_resampled
+
 @app.route('/generate-chart', methods=['POST'])
 def generate_chart():
     try:
         # Получаем данные из запроса
         data = request.json.get('data', [])
-        print("Received data:", data)  # Логирование полученных данных
+        num_points = request.json.get('num_points', 100)  # Количество точек для отображения
 
         images = []
         for item in data:
-            print(f"Processing item: {item}")  # Логирование обрабатываемого элемента
+            # Разбиваем данные на заданное количество точек
+            n_resampled, values_resampled = resample_data(item['n'], item['values'], num_points)
+
 
             # Создаем график
             plt.figure(figsize=(6, 3))
 
             # Основные данные
-            plt.plot(item['n'], item['values'], 'o-', markersize=3, label='Данные', alpha=0.7)
+            plt.plot(n_resampled, values_resampled, 'o-', markersize=3, label='Данные', alpha=0.7)
 
             # Среднее значение
-            avg_values = calculate_cumulative_average(item['values'])
-            plt.plot(item['n'], avg_values, '--', linewidth=1.5, label='Среднее')
+            avg_values = calculate_cumulative_average(values_resampled)
+            plt.plot(n_resampled, avg_values, '--', linewidth=1.5, label='Среднее')
 
             # Настройки графика
             plt.title(item['name'])
