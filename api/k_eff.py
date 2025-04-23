@@ -27,7 +27,7 @@ def generate_chart():
             print(f"Processing item: {item}")  # Логирование обрабатываемого элемента
 
             # Создаем график
-            plt.figure(figsize=(12, 6))
+            plt.figure(figsize=(6, 3))
 
             # Основные данные
             plt.plot(item['n'], item['values'], 'o-', markersize=3, label='Данные', alpha=0.7)
@@ -38,8 +38,16 @@ def generate_chart():
 
             # Настройки графика
             plt.title(item['name'])
-            plt.xlabel(item['xAxisLabel'])  # Используем подпись для оси X
-            plt.ylabel(item['yAxisLabel'])  # Используем подпись для оси Y
+            if item['xAxisLabel'] == 'N':
+                plt.xlabel("Число частиц " + item['xAxisLabel'])  # Используем подпись для оси X
+            else :
+                plt.xlabel(item['xAxisLabel'])  # Используем подпись для оси X
+            if item['yAxisLabel'] == "H":
+              plt.ylabel("Энтропия Шеннона" + item['yAxisLabel'])  # Используем подпись для оси Y
+            elif item['yAxisLabel'] == "Keff":
+              plt.ylabel("Коэффициент размножения" + item['yAxisLabel'])  # Используем подпись для оси Y
+            else :
+              plt.ylabel(item['yAxisLabel'])  # Используем подпись для оси Y
             plt.grid(True, linestyle='--', alpha=0.3)
             plt.legend()
 
